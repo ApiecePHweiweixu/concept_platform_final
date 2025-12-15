@@ -48,26 +48,32 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       
-      // 临时策略：模拟登录
-      if (form.username === 'student' && form.password === '123456') {
-        setTimeout(() => {
-          localStorage.setItem('user', JSON.stringify({ username: form.username, role: 'student' }))
-          ElMessage.success('登录成功')
-          router.push('/')
-          loading.value = false
-        }, 500)
-        return
-      }
-
       try {
         const res = await login(form)
-        // 假设后端返回的数据中包含 token 或用户信息
-        localStorage.setItem('user', JSON.stringify(res)) 
+        
+        // 1. 打印后端返回的数据，便于调试
+        console.log('Login API Response:', res)
+
+        // 2. 数据处理与映射
+        // 确保 user 对象中包含 userId
+        const userObj = { ...res }
+        
+        // 映射 user_id -> userId
+        if (userObj.user_id && !userObj.userId) {
+          userObj.userId = userObj.user_id
+        }
+        // 映射 id -> userId (如果后端返回的是 id)
+        if (userObj.id && !userObj.userId) {
+          userObj.userId = userObj.id
+        }
+
+        // 3. 存入 localStorage
+        localStorage.setItem('user', JSON.stringify(userObj)) 
+        
         ElMessage.success('登录成功')
         router.push('/')
       } catch (error) {
         console.error('登录失败', error)
-        // 注意：utils/request.js 中已经处理了错误提示，这里不需要重复 ElMessage.error
       } finally {
         loading.value = false
       }

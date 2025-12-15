@@ -8,3 +8,9 @@ export function login(data) {
   })
 }
 
+export function getExperts() {
+  return request({
+    url: '/api/user/experts', // 假设获取专家列表的接口
+    method: 'get'
+  })
+}

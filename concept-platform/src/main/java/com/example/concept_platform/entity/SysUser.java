@@ -22,6 +22,8 @@ public class SysUser {
 
     private String realName;
 
+    private String field;
+
     private String role; // APPLICANT, EXPERT, ADMIN
 
     private LocalDateTime createdAt;

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -22,6 +23,12 @@ public class Project {
 
     private String techDomain;
 
+    private BigDecimal budget;
+
+    private String attachmentUrl;
+
+    private String rejectReason;
+
     /**
      * 0-Draft, 1-Pending Review, 2-In Library, 9-Rejected
      */
@@ -31,4 +38,3 @@ public class Project {
 
     private LocalDateTime createdAt;
 }
-

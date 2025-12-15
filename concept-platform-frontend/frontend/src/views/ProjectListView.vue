@@ -4,7 +4,10 @@
       <template #header>
         <div class="card-header">
           <span>项目列表</span>
-          <el-button type="primary" size="small" @click="refreshList">刷新</el-button>
+          <div>
+            <el-button type="primary" size="small" @click="$router.push('/project/add')">新增项目</el-button>
+            <el-button type="success" size="small" @click="refreshList">刷新</el-button>
+          </div>
         </div>
       </template>
 
@@ -41,8 +44,9 @@ const getStatusType = (status) => {
   const map = {
     0: 'info',
     1: 'primary',
-    2: 'success', // 假设 2 是已通过
-    3: 'danger'   // 假设 3 是已驳回
+    2: 'warning', // 评审中
+    3: 'success', // 已入库
+    9: 'danger'   // 已驳回
   }
   return map[status] || 'info'
 }
@@ -51,8 +55,9 @@ const getStatusLabel = (status) => {
   const map = {
     0: '草稿',
     1: '待初审',
-    2: '已通过',
-    3: '已驳回'
+    2: '评审中',
+    3: '已入库',
+    9: '已驳回'
   }
   return map[status] || '未知状态'
 }
