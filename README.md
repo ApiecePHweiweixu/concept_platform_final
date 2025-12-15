@@ -32,7 +32,7 @@
 3.  这将创建数据库 `concept_platform` 并插入初始化测试数据。
 
 ### 2. 后端启动 (Backend)
-1.  使用 **IntelliJ IDEA** 打开 `backend` 文件夹。
+1.  使用 **IntelliJ IDEA** 打开 `concept-platform` 文件夹。
 2.  **关键步骤**：打开 `src/main/resources/application.properties`。
 3.  **修改密码**：将 `spring.datasource.password` 改为你自己本地 MySQL 的密码！
 4.  等待 Maven 依赖下载完成（右侧边栏 Maven -> 刷新）。
