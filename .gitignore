@@ -1,0 +1,15 @@
+# --- Java/IntelliJ 垃圾文件 ---
+target/
+*.class
+.idea/
+*.iml
+*.log
+
+# --- 前端/Node 垃圾文件 (这个最重要，不加它你会传几十万个文件) ---
+node_modules/
+dist/
+npm-debug.log*
+.DS_Store
+
+# --- 系统文件 ---
+Thumbs.db
