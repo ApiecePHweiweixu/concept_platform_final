@@ -53,9 +53,8 @@
               </template>
             </el-table-column>
             <el-table-column prop="auditTime" label="审核时间" width="180">
-               <!-- 假设后端有 auditTime 字段，没有则留空 -->
-               <template #default="scope">
-                {{ scope.row.auditTime ? scope.row.auditTime.replace('T', ' ').substring(0, 19) : '-' }}
+              <template #default="scope">
+                {{ scope.row.auditTime ? scope.row.auditTime.replace('T', ' ') : '-' }}
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" fixed="right">

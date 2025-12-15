@@ -11,6 +11,7 @@ import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -136,6 +137,7 @@ public class ProjectController {
 
         Project project = new Project();
         project.setProjectId(auditDto.getProjectId());
+        project.setAuditTime(LocalDateTime.now()); // Set Audit Time
 
         if (auditDto.getPass()) {
             // Check if experts are assigned

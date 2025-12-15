@@ -66,7 +66,7 @@
              </template>
           </el-table-column>
           <el-table-column prop="score" label="评分" width="80" />
-          <el-table-column prop="comment" label="评语" />
+          <el-table-column prop="comments" label="评语" />
         </el-table>
       </div>
 

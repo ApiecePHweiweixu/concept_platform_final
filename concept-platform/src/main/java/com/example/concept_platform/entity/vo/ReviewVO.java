@@ -8,6 +8,7 @@ public class ReviewVO {
     private Integer reviewId;
     private Integer projectId;
     private String projectName;
+    private String projectDescription; // Added project description
     private String applicantName;
     private String techDomain;
     private String attachmentUrl;

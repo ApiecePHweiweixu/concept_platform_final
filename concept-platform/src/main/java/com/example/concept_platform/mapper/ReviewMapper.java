@@ -12,7 +12,7 @@ import java.util.List;
 public interface ReviewMapper extends BaseMapper<Review> {
     
     @Select("SELECT r.review_id, r.project_id, r.status, r.score, r.comments, r.review_time, " +
-            "p.project_name, p.tech_domain, p.attachment_url, u.real_name as applicant_name " +
+            "p.project_name, p.description as project_description, p.tech_domain, p.attachment_url, u.real_name as applicant_name " +
             "FROM review r " +
             "LEFT JOIN project p ON r.project_id = p.project_id " +
             "LEFT JOIN sys_user u ON p.applicant_id = u.user_id " +

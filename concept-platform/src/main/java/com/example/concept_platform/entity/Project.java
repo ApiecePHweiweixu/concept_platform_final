@@ -29,8 +29,10 @@ public class Project {
 
     private String rejectReason;
 
+    private LocalDateTime auditTime;
+
     /**
-     * 0-Draft, 1-Pending Review, 2-In Library, 9-Rejected
+     * 0-Draft, 1-Pending Review, 2-In Library, 9-Rejected, 3-Review Ended/Pending Final
      */
     private Integer status;
 

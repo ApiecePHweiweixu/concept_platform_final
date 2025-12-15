@@ -152,6 +152,9 @@ const handleReview = (row) => {
   // 优先取 row.reviewId，如果没有则尝试取 row.id
   form.reviewId = row.reviewId || row.id 
   form.projectId = row.projectId
+  // 确保简介字段正确映射
+  // 如果后端返回的简介字段叫 description 或 projectDescription，请在此处适配
+  currentProject.value.description = row.description || row.projectDescription || '暂无简介'
   form.score = 80
   form.comment = ''
   dialogVisible.value = true
