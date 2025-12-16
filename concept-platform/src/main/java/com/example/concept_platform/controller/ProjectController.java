@@ -26,6 +26,12 @@ public class ProjectController {
     @Autowired
     private IReviewService reviewService;
 
+    @Data
+    public static class StatItem {
+        private String name;
+        private Long value;
+    }
+
     // Get List
     @GetMapping("/list")
     public Result<List<Project>> list() {
@@ -100,6 +106,59 @@ public class ProjectController {
         resultVO.setReviews(simpleReviews);
         
         return Result.success(resultVO);
+    }
+
+    /**
+     * 统计各技术领域项目数量（用于饼图）
+     */
+    @GetMapping("/stats/domain")
+    public Result<List<StatItem>> getDomainStats() {
+        List<Project> projects = projectService.list();
+        List<StatItem> stats = projects.stream()
+                .collect(Collectors.groupingBy(
+                        p -> p.getTechDomain() == null || p.getTechDomain().isBlank() ? "未分类" : p.getTechDomain(),
+                        Collectors.counting()))
+                .entrySet()
+                .stream()
+                .map(e -> {
+                    StatItem item = new StatItem();
+                    item.setName(e.getKey());
+                    item.setValue(e.getValue());
+                    return item;
+                })
+                .collect(Collectors.toList());
+        return Result.success(stats);
+    }
+
+    /**
+     * 统计项目状态数量（用于柱状图）
+     */
+    @GetMapping("/stats/status")
+    public Result<List<StatItem>> getStatusStats() {
+        List<Project> projects = projectService.list();
+        List<StatItem> stats = projects.stream()
+                .collect(Collectors.groupingBy(
+                        p -> p.getStatus() == null ? -1 : p.getStatus(),
+                        Collectors.counting()))
+                .entrySet()
+                .stream()
+                .map(e -> {
+                    StatItem item = new StatItem();
+                    String name;
+                    switch (e.getKey()) {
+                        case 1: name = "待审核"; break;
+                        case 2: name = "评审中"; break;
+                        case 3: name = "已入库"; break;
+                        case 9: name = "已驳回"; break;
+                        case 0: name = "草稿"; break;
+                        default: name = "未知"; break;
+                    }
+                    item.setName(name);
+                    item.setValue(e.getValue());
+                    return item;
+                })
+                .collect(Collectors.toList());
+        return Result.success(stats);
     }
 
     // Assign Experts

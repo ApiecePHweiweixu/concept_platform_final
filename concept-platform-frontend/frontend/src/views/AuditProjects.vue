@@ -1,16 +1,17 @@
 <template>
-  <div class="audit-projects-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>项目审核</span>
-          <el-button type="primary" size="small" @click="fetchData">刷新</el-button>
-        </div>
-      </template>
+  <div class="page-wrap audit-projects">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">项目审核</h2>
+        <p class="page-subtitle">按状态查看待审与已处理项目</p>
+      </div>
+      <el-button type="primary" plain size="small" @click="fetchData">刷新</el-button>
+    </div>
 
+    <el-card class="surface-card" shadow="never">
       <el-tabs v-model="activeTab" class="audit-tabs">
         <el-tab-pane label="待审核" name="pending">
-          <el-table :data="pendingList" v-loading="loading" style="width: 100%" stripe>
+          <el-table :data="pendingList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
             <el-table-column label="申报材料" width="120">
               <template #default="scope">
@@ -22,7 +23,7 @@
                 >
                   查看附件
                 </el-link>
-                <span v-else style="color: #909399; font-size: 12px;">无附件</span>
+                <span v-else class="muted small">无附件</span>
               </template>
             </el-table-column>
             <el-table-column prop="techDomain" label="技术领域" width="150" />
@@ -40,10 +41,8 @@
         </el-tab-pane>
 
         <el-tab-pane label="已审核" name="processed">
-          <el-table :data="processedList" v-loading="loading" style="width: 100%" stripe>
+          <el-table :data="processedList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
-             <!-- 这里后端暂未返回申报人姓名，暂时留空或不显示 -->
-            <!-- <el-table-column prop="applicantName" label="申报人" width="120" /> -->
             <el-table-column prop="techDomain" label="技术领域" width="150" />
             <el-table-column prop="status" label="当前状态" width="120">
               <template #default="scope">
@@ -67,9 +66,8 @@
       </el-tabs>
     </el-card>
 
-    <!-- 审核弹窗 -->
-    <el-dialog v-model="dialogVisible" title="项目审核" width="500px" @close="resetForm">
-      <el-form :model="auditForm" label-width="80px">
+    <el-dialog v-model="dialogVisible" title="项目审核" width="520px" @close="resetForm">
+      <el-form :model="auditForm" label-width="80px" class="tech-form">
         <el-form-item label="审核结果">
           <el-radio-group v-model="auditForm.action">
             <el-radio value="PASS">通过并指派</el-radio>
@@ -84,7 +82,7 @@
                 {{ item.realName || item.username }} ({{ item.field || '通用' }})
               </el-checkbox>
             </el-checkbox-group>
-            <div class="el-upload__tip">请选择 1-3 名专家</div>
+            <div class="muted small">请选择 1-3 名专家</div>
           </el-form-item>
         </template>
 
@@ -102,12 +100,10 @@
       </template>
     </el-dialog>
 
-    <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="项目详情" width="600px">
+    <el-dialog v-model="detailVisible" title="项目详情" width="620px">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="项目名称">{{ currentDetail.projectName }}</el-descriptions-item>
         <el-descriptions-item label="技术领域">{{ currentDetail.techDomain }}</el-descriptions-item>
-        <!-- 假设申报人名字在 applicantName 字段，如果后端没返回可以暂时不显示或显示 ID -->
         <el-descriptions-item label="申报人">{{ currentDetail.applicantName || currentDetail.applicantId }}</el-descriptions-item>
         <el-descriptions-item label="项目简介">{{ currentDetail.description }}</el-descriptions-item>
         <el-descriptions-item label="附件">
@@ -119,7 +115,7 @@
           >
             下载申报书
           </el-link>
-          <span v-else style="color: #909399;">无附件</span>
+          <span v-else class="muted">无附件</span>
         </el-descriptions-item>
       </el-descriptions>
       <template #footer>
@@ -148,12 +144,11 @@ const currentDetail = ref({})
 
 const auditForm = reactive({
   projectId: null,
-  action: 'PASS', // PASS or REJECT
+  action: 'PASS',
   expertIds: [],
   comment: ''
 })
 
-// 计算属性拆分数据
 const pendingList = computed(() => {
   return allProjects.value.filter(item => item.status === 1)
 })
@@ -162,14 +157,13 @@ const processedList = computed(() => {
   return allProjects.value.filter(item => [2, 3, 9].includes(item.status))
 })
 
-// 状态显示辅助函数 (从 ProjectListView 复制而来)
 const getStatusType = (status) => {
   const map = {
     0: 'info',
     1: 'primary',
-    2: 'warning', // 评审中
-    3: 'success', // 已入库
-    9: 'danger'   // 已驳回
+    2: 'warning',
+    3: 'success',
+    9: 'danger'
   }
   return map[status] || 'info'
 }
@@ -185,11 +179,10 @@ const getStatusLabel = (status) => {
   return map[status] || '未知状态'
 }
 
-// 获取项目列表 (获取所有，前端过滤)
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getList({}) // 不传状态参数，获取全部
+    const res = await getList({})
     if (Array.isArray(res)) {
       allProjects.value = res
     } else if (res && Array.isArray(res.list)) {
@@ -204,15 +197,10 @@ const fetchData = async () => {
   }
 }
 
-// 获取专家列表
 const fetchExperts = async () => {
   try {
     const res = await getExperts()
-    // 打印日志，确认后端是否返回了 field 和 realName 字段
-    console.log('获取到的专家列表:', res)
-    // 假设返回的是数组
     const list = Array.isArray(res) ? res : (res.list || [])
-    // 映射确保 userId 存在，防止复选框全选 bug
     expertList.value = list.map(item => ({
       ...item,
       userId: item.userId || item.id
@@ -229,14 +217,11 @@ const getFullUrl = (url) => {
 }
 
 const handleAudit = (row) => {
-  // 确保正确获取 projectId
   auditForm.projectId = row.id || row.projectId
   auditForm.action = 'PASS'
   auditForm.expertIds = []
   auditForm.comment = ''
   dialogVisible.value = true
-  
-  // 专家列表已经在 onMounted 加载
 }
 
 const handleView = (row) => {
@@ -259,36 +244,31 @@ const submitAudit = async () => {
       ElMessage.warning('请选择 1-3 名专家')
       return
     }
-    // 通过并指派
     payload = {
       projectId: auditForm.projectId,
       pass: true,
       expertIds: auditForm.expertIds,
-      rejectReason: '' // 确保字段存在
+      rejectReason: ''
     }
   } else if (auditForm.action === 'REJECT') {
     if (!auditForm.comment.trim()) {
       ElMessage.warning('请输入驳回理由')
       return
     }
-    // 驳回
     payload = {
       projectId: auditForm.projectId,
       pass: false,
       rejectReason: auditForm.comment,
-      expertIds: [] // 确保字段存在
+      expertIds: []
     }
   }
-  
-  // 打印调试
-  console.log('提交审核参数:', payload)
 
   submitting.value = true
   try {
     await auditProject(payload)
     ElMessage.success('操作成功')
     dialogVisible.value = false
-    await fetchData() // 立即刷新列表
+    await fetchData()
   } catch (error) {
     console.error(error)
   } finally {
@@ -298,21 +278,22 @@ const submitAudit = async () => {
 
 onMounted(() => {
   fetchData()
-  fetchExperts() // 页面加载时获取专家列表
+  fetchExperts()
 })
 </script>
 
 <style scoped>
-.audit-projects-container {
-  padding: 20px;
-}
-.card-header {
+.audit-projects {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
 }
-/* 调整 Tab 内容的间距 */
+
 .audit-tabs {
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+.muted.small {
+  font-size: 12px;
 }
 </style>

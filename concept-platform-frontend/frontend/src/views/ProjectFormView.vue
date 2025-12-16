@@ -1,14 +1,15 @@
 <template>
-  <div class="project-form-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>项目申报</span>
-          <el-button @click="$router.back()">返回</el-button>
-        </div>
-      </template>
+  <div class="page-wrap project-form">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">项目申报</h2>
+        <p class="page-subtitle">提交项目信息与附件，进入审核流程</p>
+      </div>
+      <el-button plain @click="$router.back()">返回</el-button>
+    </div>
 
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
+    <el-card class="surface-card" shadow="never">
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="110px" class="tech-form">
         <el-form-item label="项目名称" prop="projectName">
           <el-input v-model="form.projectName" placeholder="请输入项目名称" />
         </el-form-item>
@@ -22,11 +23,6 @@
         </el-form-item>
 
         <el-form-item label="附件上传" prop="attachmentUrl">
-          <!-- 
-            action: 上传接口地址，硬编码为后端地址
-            on-success: 上传成功后的回调
-            limit: 限制上传1个文件
-          -->
           <el-upload
             class="upload-demo"
             action="http://localhost:8080/api/common/upload"
@@ -37,7 +33,7 @@
           >
             <el-button type="primary">点击上传</el-button>
             <template #tip>
-              <div class="el-upload__tip">
+              <div class="el-upload__tip muted">
                 只能上传 jpg/png/pdf/doc 文件，且不超过 500kb
               </div>
             </template>
@@ -68,7 +64,7 @@ const form = reactive({
   projectName: '',
   techDomain: '',
   description: '',
-  attachmentUrl: '' // 存储上传成功后的 URL
+  attachmentUrl: ''
 })
 
 const rules = {
@@ -77,15 +73,12 @@ const rules = {
   attachmentUrl: [{ required: true, message: '请上传附件', trigger: 'change' }]
 }
 
-// 上传成功回调
-const handleUploadSuccess = (response, uploadFile) => {
-  // 假设后端返回格式为 { code: 200, msg: "success", data: "http://xxx/file.pdf" }
+const handleUploadSuccess = (response) => {
   if (response.code === 200) {
     form.attachmentUrl = response.data
     ElMessage.success('上传成功')
   } else {
     ElMessage.error(response.msg || '上传失败')
-    // 如果失败，可以清空文件列表
     fileList.value = []
   }
 }
@@ -97,12 +90,11 @@ const handleUploadError = (error) => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true
       try {
-        // 1. 获取用户信息
         const userStr = localStorage.getItem('user')
         let user = {}
         if (userStr) {
@@ -112,32 +104,21 @@ const handleSubmit = async () => {
             console.error('JSON Parse Error', e)
           }
         }
-        
-        // 关键点：打印调试
-        console.log('Current User:', user)
 
-        // 2. 构建提交数据
         const submitData = {
           projectName: form.projectName,
           description: form.description,
           techDomain: form.techDomain,
           attachmentUrl: form.attachmentUrl,
-          status: 1 // 强制设置为 1 (待初审)
+          status: 1
         }
 
-        // 3. 强制赋值 applicantId
-        // 尝试多种可能的字段名
         const userId = user.userId || user.user_id || user.id
-
-        if (userId) {
-          submitData.applicantId = userId
-        } else {
-          // 保底策略
-          submitData.applicantId = 1
+        submitData.applicantId = userId || 1
+        if (!userId) {
           ElMessage.warning('当前未读取到用户ID，使用测试ID: 1')
         }
 
-        // 4. 发送请求
         await addProject(submitData)
         ElMessage.success('项目申报成功')
         router.push('/')
@@ -158,15 +139,10 @@ const resetForm = () => {
 </script>
 
 <style scoped>
-.project-form-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-.card-header {
+.project-form {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 900px;
 }
 </style>
-

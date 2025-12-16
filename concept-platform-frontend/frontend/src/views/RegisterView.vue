@@ -1,12 +1,16 @@
 <template>
-  <div class="register-container">
-    <el-card class="register-card">
+  <div class="auth-shell single">
+    <el-card class="auth-card surface-card" shadow="never">
       <template #header>
-        <div class="card-header">
-          <span>注册</span>
+        <div class="card-heading">
+          <div>
+            <div class="title">创建账户</div>
+            <p class="muted">注册后即可提交项目并跟进审核</p>
+          </div>
+          <el-button link type="primary" @click="$router.push('/login')">返回登录</el-button>
         </div>
       </template>
-      <el-form :model="form" :rules="rules" ref="registerFormRef" label-width="80px" status-icon>
+      <el-form :model="form" :rules="rules" ref="registerFormRef" label-width="90px" status-icon class="tech-form">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名" />
         </el-form-item>
@@ -23,8 +27,7 @@
           <el-input v-model="form.company" placeholder="请输入所属单位 (选填)" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" class="register-button" :loading="loading" @click="handleRegister">立即注册</el-button>
-          <el-button class="back-button" @click="$router.push('/login')">返回登录</el-button>
+          <el-button type="primary" class="submit" :loading="loading" @click="handleRegister">立即注册</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -68,10 +71,9 @@ const rules = {
 
 const handleRegister = () => {
   if (!registerFormRef.value) return
-  
+
   registerFormRef.value.validate(async (valid) => {
     if (valid) {
-      console.log('校验通过，正在发送请求...')
       loading.value = true
       try {
         const submitData = {
@@ -80,7 +82,7 @@ const handleRegister = () => {
           realName: form.realName,
           company: form.company
         }
-        
+
         await register(submitData)
         ElMessage.success('注册成功')
         router.push('/login')
@@ -89,39 +91,44 @@ const handleRegister = () => {
       } finally {
         loading.value = false
       }
-    } else {
-      console.log('表单校验失败')
-      return false
     }
   })
 }
 </script>
 
 <style scoped>
-.register-container {
+.auth-shell.single {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 60px 20px;
+}
+
+.auth-card {
+  width: 520px;
+}
+
+.card-heading {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f0f2f5;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.register-card {
-  width: 450px;
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
 }
 
-.card-header {
-  text-align: center;
-  font-weight: bold;
-  font-size: 18px;
+.submit {
+  width: 100%;
+  padding: 12px 0;
 }
 
-.register-button {
-  width: 120px;
-}
-
-.back-button {
-  width: 120px;
-  margin-left: 20px;
+@media (max-width: 640px) {
+  .auth-card {
+    width: 100%;
+  }
 }
 </style>

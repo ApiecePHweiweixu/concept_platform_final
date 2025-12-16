@@ -1,17 +1,18 @@
 <template>
-  <div class="project-list-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>项目列表</span>
-          <div>
-            <el-button type="primary" size="small" @click="$router.push('/project/add')">新增项目</el-button>
-            <el-button type="success" size="small" @click="refreshList">刷新</el-button>
-          </div>
-        </div>
-      </template>
+  <div class="page-wrap project-list">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">项目列表</h2>
+        <p class="page-subtitle">查看所有项目并快速创建/刷新</p>
+      </div>
+      <div class="header-actions">
+        <el-button type="primary" size="small" @click="$router.push('/project/add')">新增项目</el-button>
+        <el-button type="primary" plain size="small" @click="refreshList">刷新</el-button>
+      </div>
+    </div>
 
-      <el-table :data="tableData" v-loading="loading" style="width: 100%" stripe>
+    <el-card class="surface-card" shadow="never">
+      <el-table :data="tableData" v-loading="loading" style="width: 100%" stripe class="tech-table">
         <el-table-column prop="projectName" label="项目名称" min-width="150" />
         <el-table-column prop="techDomain" label="技术领域" width="150" />
         <el-table-column prop="status" label="当前状态" width="120">
@@ -34,19 +35,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getList } from '@/api/project'
-import { ElMessage } from 'element-plus'
 
 const tableData = ref([])
 const loading = ref(false)
 
 const getStatusType = (status) => {
-  // 0-草稿是灰色(info)，1-待初审是蓝色(primary)
   const map = {
     0: 'info',
     1: 'primary',
-    2: 'warning', // 评审中
-    3: 'success', // 已入库
-    9: 'danger'   // 已驳回
+    2: 'warning',
+    3: 'success',
+    9: 'danger'
   }
   return map[status] || 'info'
 }
@@ -66,9 +65,6 @@ const fetchData = async () => {
   loading.value = true
   try {
     const res = await getList({})
-    // 兼容处理：如果 res 是数组则直接使用，如果是对象且有 list 属性则使用 list，否则为空数组
-    // 注意：request.js 拦截器已经处理了 res.data 的解构 (返回 res.data.data)
-    // 假设后端标准返回 data: [] 或 data: { list: [], total: 0 }
     if (Array.isArray(res)) {
       tableData.value = res
     } else if (res && Array.isArray(res.list)) {
@@ -93,16 +89,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.project-list-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.card-header {
+.header-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 8px;
 }
 </style>
-

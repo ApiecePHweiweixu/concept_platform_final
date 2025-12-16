@@ -31,3 +31,19 @@ export function auditProject(data) {
     data
   })
 }
+
+// 统计技术领域分布
+export function getDomainStats() {
+  return request({
+    url: '/api/project/stats/domain',
+    method: 'get'
+  })
+}
+
+// 统计状态分布
+export function getStatusStats() {
+  return request({
+    url: '/api/project/stats/status',
+    method: 'get'
+  })
+}

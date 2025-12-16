@@ -1,54 +1,59 @@
 <template>
-  <div class="common-layout">
-    <el-container>
-      <el-aside width="200px">
-        <div class="logo">概念验证平台</div>
-        <el-menu
-          :default-active="activeMenu"
-          class="el-menu-vertical-demo"
-          router
-        >
-          <!-- APPLICANT (申报人) 菜单 -->
-          <template v-if="userRole === 'APPLICANT' || userRole === 'student'">
-             <el-menu-item index="/my-projects">
-              <el-icon><document /></el-icon>
-              <span>我的项目</span>
-            </el-menu-item>
-             <el-menu-item index="/project/add">
-              <el-icon><plus /></el-icon>
-              <span>新建申报</span>
-            </el-menu-item>
-          </template>
+  <div class="layout-shell">
+    <aside class="nav-rail surface-card">
+      <div class="brand">
+        <div class="brand-mark">CP</div>
+        <div class="brand-text">
+          <div class="brand-title">概念验证平台</div>
+          <p class="brand-sub">Concept Platform</p>
+        </div>
+      </div>
+      <el-menu :default-active="activeMenu" class="nav-menu" router>
+        <template v-if="userRole === 'APPLICANT' || userRole === 'student'">
+          <el-menu-item index="/my-projects">
+            <el-icon><Document /></el-icon>
+            <span>我的项目</span>
+          </el-menu-item>
+          <el-menu-item index="/project/add">
+            <el-icon><Plus /></el-icon>
+            <span>新建申报</span>
+          </el-menu-item>
+        </template>
 
-          <!-- ADMIN (管理员) 菜单 -->
-          <template v-if="userRole === 'ADMIN'">
-             <el-menu-item index="/audit-projects">
-              <el-icon><finished /></el-icon>
-              <span>项目审核</span>
-            </el-menu-item>
-          </template>
+        <template v-if="userRole === 'ADMIN'">
+          <el-menu-item index="/audit-projects">
+            <el-icon><Finished /></el-icon>
+            <span>项目审核</span>
+          </el-menu-item>
+        </template>
 
-          <!-- EXPERT (专家) 菜单 -->
-          <template v-if="userRole === 'EXPERT'">
-             <el-menu-item index="/expert-reviews">
-              <el-icon><chat-dot-square /></el-icon>
-              <span>评审任务</span>
-            </el-menu-item>
-          </template>
-        </el-menu>
-      </el-aside>
-      <el-container>
-        <el-header>
-          <div class="header-content">
-            <span>当前用户: {{ username }} ({{ userRole }})</span>
-            <el-button link @click="logout">退出登录</el-button>
+        <template v-if="userRole === 'EXPERT'">
+          <el-menu-item index="/expert-reviews">
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>评审任务</span>
+          </el-menu-item>
+        </template>
+      </el-menu>
+    </aside>
+
+    <div class="main-stack">
+      <header class="app-header surface-card">
+        <div class="header-left">
+          <p class="eyebrow">概念平台 · 控制台</p>
+          <div class="user-block">
+            <div class="user-name">{{ username }}</div>
+            <span class="muted">{{ userRole }}</span>
           </div>
-        </el-header>
-        <el-main>
-          <router-view />
-        </el-main>
-      </el-container>
-    </el-container>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" plain @click="logout">退出登录</el-button>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <router-view />
+      </main>
+    </div>
   </div>
 </template>
 
@@ -62,7 +67,7 @@ const route = useRoute()
 
 const user = ref({})
 const username = computed(() => user.value.username || 'Unknown')
-const userRole = computed(() => user.value.role || 'GUEST') // 默认 GUEST
+const userRole = computed(() => user.value.role || 'GUEST')
 
 const activeMenu = computed(() => route.path)
 
@@ -71,7 +76,6 @@ onMounted(() => {
   if (storedUser) {
     try {
       user.value = JSON.parse(storedUser)
-      // 兼容之前的模拟登录逻辑，如果没有 role 默认给一个，或者确保登录时写入 role
       if (!user.value.role && user.value.username === 'student') {
         user.value.role = 'APPLICANT'
       }
@@ -88,39 +92,117 @@ const logout = () => {
 </script>
 
 <style scoped>
-.common-layout {
-  height: 100vh;
+.layout-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  gap: 18px;
+  padding: 18px;
 }
-.el-container {
-  height: 100%;
+
+.nav-rail {
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-.el-aside {
-  background-color: #fff;
-  border-right: 1px solid #dcdfe6;
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
 }
-.logo {
-  height: 60px;
-  line-height: 60px;
-  text-align: center;
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--gradient-primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.brand-title {
+  font-weight: 700;
+}
+
+.brand-sub {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.nav-menu {
+  flex: 1;
+  background: transparent;
+}
+
+.main-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.user-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.user-name {
   font-size: 18px;
-  font-weight: bold;
-  border-bottom: 1px solid #dcdfe6;
 }
-.el-header {
-  background-color: #fff;
-  border-bottom: 1px solid #dcdfe6;
+
+.header-actions {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  gap: 10px;
 }
-.header-content {
-  display: flex;
-  gap: 15px;
-  align-items: center;
+
+.app-main {
+  padding: 0 6px 10px 6px;
 }
-.el-main {
-  background-color: #f5f7fa;
-  padding: 20px;
+
+@media (max-width: 1100px) {
+  .layout-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-rail {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nav-menu {
+    width: 100%;
+  }
 }
 </style>
-

@@ -1,17 +1,17 @@
 <template>
-  <div class="expert-reviews-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>评审任务</span>
-          <el-button type="primary" size="small" @click="fetchData">刷新</el-button>
-        </div>
-      </template>
+  <div class="page-wrap expert-reviews">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">评审任务</h2>
+        <p class="page-subtitle">处理待评审项目并查看历史评审</p>
+      </div>
+      <el-button type="primary" plain size="small" @click="fetchData">刷新</el-button>
+    </div>
 
+    <el-card class="surface-card" shadow="never">
       <el-tabs v-model="activeTab" class="review-tabs">
-        <!-- 待评审 Tab -->
         <el-tab-pane label="待评审" name="pending">
-          <el-table :data="pendingList" v-loading="loading" style="width: 100%" stripe>
+          <el-table :data="pendingList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
             <el-table-column label="申报材料" width="120">
               <template #default="scope">
@@ -23,7 +23,7 @@
                 >
                   查看附件
                 </el-link>
-                <span v-else style="color: #909399; font-size: 12px;">无附件</span>
+                <span v-else class="muted small">无附件</span>
               </template>
             </el-table-column>
             <el-table-column prop="techDomain" label="技术领域" width="150" />
@@ -40,9 +40,8 @@
           </el-table>
         </el-tab-pane>
 
-        <!-- 已评审 Tab -->
         <el-tab-pane label="已评审" name="reviewed">
-          <el-table :data="reviewedList" v-loading="loading" style="width: 100%" stripe>
+          <el-table :data="reviewedList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
             <el-table-column prop="techDomain" label="技术领域" width="150" />
             <el-table-column prop="score" label="评分" width="100" />
@@ -56,17 +55,14 @@
       </el-tabs>
     </el-card>
 
-    <!-- 评审弹窗 -->
-    <el-dialog v-model="dialogVisible" title="项目评审" width="600px" @close="resetForm">
+    <el-dialog v-model="dialogVisible" title="项目评审" width="620px" @close="resetForm">
       <el-descriptions title="项目信息" :column="1" border>
         <el-descriptions-item label="项目名称">{{ currentProject.projectName }}</el-descriptions-item>
         <el-descriptions-item label="技术领域">{{ currentProject.techDomain }}</el-descriptions-item>
         <el-descriptions-item label="项目简介">{{ currentProject.description }}</el-descriptions-item>
       </el-descriptions>
-      
       <el-divider />
-
-      <el-form :model="form" ref="formRef" :rules="rules" label-width="80px" style="margin-top: 20px;">
+      <el-form :model="form" ref="formRef" :rules="rules" label-width="80px" style="margin-top: 10px;" class="tech-form">
         <el-form-item label="评分" prop="score">
           <el-input-number v-model="form.score" :min="0" :max="100" />
         </el-form-item>
@@ -98,7 +94,7 @@ const currentProject = ref({})
 const formRef = ref(null)
 
 const form = reactive({
-  reviewId: null, // 评审任务ID
+  reviewId: null,
   projectId: null,
   score: 80,
   comment: ''
@@ -109,13 +105,12 @@ const rules = {
   comment: [{ required: true, message: '请输入评语', trigger: 'blur' }]
 }
 
-// 拆分数据
 const pendingList = computed(() => {
-  return allReviews.value.filter(item => item.status === 0 || !item.status) // status 0 或 null 为待评审
+  return allReviews.value.filter(item => item.status === 0 || !item.status)
 })
 
 const reviewedList = computed(() => {
-  return allReviews.value.filter(item => item.status === 1) // status 1 为已评审
+  return allReviews.value.filter(item => item.status === 1)
 })
 
 const fetchData = async () => {
@@ -125,13 +120,9 @@ const fetchData = async () => {
     let userId = null
     if (userStr) {
       const user = JSON.parse(userStr)
-      // 兼容多种 ID 字段名
       userId = user.userId || user.user_id || user.id
     }
-    
-    // 传入 expertId 获取任务列表
     const res = await getReviewList({ expertId: userId })
-    
     if (Array.isArray(res)) {
       allReviews.value = res
     } else if (res && Array.isArray(res.list)) {
@@ -148,12 +139,8 @@ const fetchData = async () => {
 
 const handleReview = (row) => {
   currentProject.value = row
-  // 关键修复：正确获取评审任务 ID
-  // 优先取 row.reviewId，如果没有则尝试取 row.id
   form.reviewId = row.reviewId || row.id 
   form.projectId = row.projectId
-  // 确保简介字段正确映射
-  // 如果后端返回的简介字段叫 description 或 projectDescription，请在此处适配
   currentProject.value.description = row.description || row.projectDescription || '暂无简介'
   form.score = 80
   form.comment = ''
@@ -173,26 +160,22 @@ const resetForm = () => {
 
 const submit = async () => {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (valid) {
-      // 构造符合后端 DTO 的数据结构
       const submitData = {
         reviewId: form.reviewId,
         projectId: form.projectId,
         score: form.score,
-        comments: form.comment // 强制映射：前端 comment -> 后端 comments (复数)
+        comments: form.comment
       }
-
-      // 调试：打印提交数据
-      console.log('提交评审数据:', submitData)
 
       submitting.value = true
       try {
         await submitReview(submitData)
         ElMessage.success('评审提交成功')
         dialogVisible.value = false
-        fetchData() // 刷新列表
+        fetchData()
       } catch (error) {
         console.error(error)
       } finally {
@@ -208,16 +191,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.expert-reviews-container {
-  padding: 20px;
-}
-.card-header {
+.expert-reviews {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
 }
+
 .review-tabs {
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+.muted.small {
+  font-size: 12px;
 }
 </style>
-
