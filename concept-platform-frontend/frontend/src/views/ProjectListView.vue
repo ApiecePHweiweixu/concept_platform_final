@@ -14,7 +14,11 @@
     <el-card class="surface-card" shadow="never">
       <el-table :data="tableData" v-loading="loading" style="width: 100%" stripe class="tech-table">
         <el-table-column prop="projectName" label="项目名称" min-width="150" />
-        <el-table-column prop="techDomain" label="技术领域" width="150" />
+        <el-table-column prop="techDomain" label="技术领域" width="150">
+          <template #default="scope">
+            {{ formatTechDomain(scope.row.techDomain) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="当前状态" width="120">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)">
@@ -35,6 +39,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getList } from '@/api/project'
+import { formatTechDomain } from '@/utils/format'
 
 const tableData = ref([])
 const loading = ref(false)

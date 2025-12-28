@@ -31,7 +31,7 @@
         <template #header>
           <div class="section-heading">
             <span>技术领域分布</span>
-            <small class="muted">实时拉取数据库统计</small>
+            <small class="muted"> 实时拉取数据库统计</small>
           </div>
         </template>
         <div ref="domainChartRef" class="chart" />
@@ -41,7 +41,7 @@
         <template #header>
           <div class="section-heading">
             <span>项目状态分布</span>
-            <small class="muted">待审核 / 评审中 / 已入库</small>
+            <small class="muted"> 草稿 / 待审核 / 评审中 / 已入库 / 已驳回</small>
           </div>
         </template>
         <div ref="statusChartRef" class="chart" />
@@ -58,7 +58,11 @@
 
       <el-table :data="tableData" v-loading="loading" style="width: 100%" stripe class="tech-table">
         <el-table-column prop="projectName" label="项目名称" min-width="150" />
-        <el-table-column prop="techDomain" label="技术领域" width="150" />
+        <el-table-column prop="techDomain" label="技术领域" width="150">
+          <template #default="scope">
+            {{ formatTechDomain(scope.row.techDomain) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="budget" label="预期经费 (万元)" width="150" />
         <el-table-column prop="status" label="当前状态" width="120">
           <template #default="scope">
@@ -72,8 +76,25 @@
             {{ scope.row.createdAt ? scope.row.createdAt.replace('T', ' ') : '' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
+            <el-button 
+              v-if="scope.row.status === 0"
+              type="primary" 
+              link
+              size="small" 
+              @click="handleEdit(scope.row)"
+            >
+              编辑
+            </el-button>
+            <el-button 
+              type="primary" 
+              link
+              size="small" 
+              @click="handleView(scope.row)"
+            >
+              查看
+            </el-button>
             <el-button 
               v-if="scope.row.status === 3 || scope.row.status === 9"
               type="primary" 
@@ -125,10 +146,14 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import { getMyProjectList, getDomainStats, getStatusStats } from '@/api/project'
 import { getProjectReviews } from '@/api/review'
+import { formatTechDomain } from '@/utils/format'
 import { ElMessage } from 'element-plus'
+
+const router = useRouter()
 
 const tableData = ref([])
 const loading = ref(false)
@@ -182,7 +207,9 @@ const renderCharts = () => {
           name: '技术领域',
           type: 'pie',
           radius: ['32%', '62%'],
-          roseType: 'area',
+          // 移除 roseType，使用普通饼图，所有扇形角度相等
+          selectedMode: false, // 禁用选中状态
+          avoidLabelOverlap: true, // 防止标签重叠
           itemStyle: {
             borderColor: 'rgba(34, 211, 238, 0.8)',
             borderWidth: 1.4,
@@ -193,7 +220,12 @@ const renderCharts = () => {
             color: '#e5f9ff',
             fontSize: 12,
             textShadowBlur: 6,
-            textShadowColor: 'rgba(15,23,42,0.9)'
+            textShadowColor: 'rgba(15,23,42,0.9)',
+            formatter: '{b}: {c}',
+            show: true
+          },
+          labelLine: {
+            show: true
           },
           color: [
             '#22d3ee',
@@ -204,21 +236,33 @@ const renderCharts = () => {
             '#facc15'
           ],
           emphasis: {
-            scale: true,
-            scaleSize: 8,
+            scale: true, // 启用鼠标悬停时的缩放效果
+            scaleSize: 10, // 缩放大小
+            focus: 'self', // 聚焦到当前扇形
             itemStyle: {
-              shadowBlur: 40,
-              shadowColor: 'rgba(34,211,238,0.95)'
+              shadowBlur: 30,
+              shadowColor: 'rgba(34,211,238,0.8)',
+              borderWidth: 2,
+              borderColor: 'rgba(56,189,248,1)'
+            },
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold'
             }
           },
-          data: domainStats.value
+          data: domainStats.value.map(item => ({
+            name: item.name,
+            value: item.value,
+            selected: false // 确保没有默认选中
+          }))
         }
       ]
     })
   }
 
   if (statusChartInstance) {
-    const order = ['待审核', '评审中', '已入库', '已驳回']
+    const order = ['草稿', '待审核', '评审中', '已入库', '已驳回']
     const valueMap = statusStats.value.reduce((acc, cur) => {
       acc[cur.name] = cur.value
       return acc
@@ -318,8 +362,53 @@ const fetchStats = async () => {
       getDomainStats(),
       getStatusStats()
     ])
-    domainStats.value = Array.isArray(domainRes) ? domainRes : (domainRes?.list || [])
-    statusStats.value = Array.isArray(statusRes) ? statusRes : (statusRes?.list || [])
+    
+    console.log('后端返回的domainRes:', JSON.stringify(domainRes, null, 2))
+    
+    // 后端返回的数据应该是一个数组，包含 {name, value} 对象
+    // request.js 的拦截器已经提取了 Result.data，所以 domainRes 直接就是 List<StatItem>
+    const rawDomainStats = Array.isArray(domainRes) ? domainRes : []
+    
+    console.log('原始领域统计数据:', rawDomainStats)
+    
+    // 定义6个标准技术领域，按固定顺序（与提交表单的6个选项一致）
+    const standardDomains = [
+      '人工智能',
+      '大数据与云计算',
+      '信息安全',
+      '物联网与嵌入式技术',
+      '数字人文技术',
+      '其他'
+    ]
+    
+    // 创建领域到数量的映射
+    const domainMap = new Map()
+    rawDomainStats.forEach((item) => {
+      // 后端返回的字段应该是小写的 name 和 value
+      const domainName = (item.name || '').trim()
+      const domainValue = Number(item.value) || 0
+      
+      console.log(`处理: name="${domainName}", value=${domainValue}`)
+      
+      // 只处理标准领域，忽略不在标准列表中的领域
+      if (domainName && standardDomains.includes(domainName) && domainValue > 0) {
+        domainMap.set(domainName, domainValue)
+      }
+    })
+    
+    console.log('领域映射结果:', Array.from(domainMap.entries()))
+    
+    // 按固定顺序构建统计数据，只显示有数据的标准领域
+    domainStats.value = standardDomains
+      .filter(domain => domainMap.has(domain))
+      .map(domain => ({
+        name: domain,
+        value: domainMap.get(domain)
+      }))
+    
+    console.log('最终domainStats.value:', domainStats.value)
+    
+    statusStats.value = Array.isArray(statusRes) ? statusRes : []
     await nextTick()
     renderCharts()
   } catch (error) {
@@ -364,6 +453,22 @@ const fetchData = async () => {
 const refreshAll = () => {
   fetchData()
   fetchStats()
+}
+
+const handleEdit = (row) => {
+  // 跳转到编辑页面，传递项目ID
+  router.push({
+    path: '/project/form',
+    query: { id: row.id || row.projectId }
+  })
+}
+
+const handleView = (row) => {
+  // 跳转到查看页面，传递项目ID
+  router.push({
+    path: '/project/form',
+    query: { id: row.id || row.projectId, view: 'true' }
+  })
 }
 
 const handleViewFeedback = async (row) => {
@@ -542,6 +647,15 @@ onBeforeUnmount(() => {
   padding: 10px;
   border-radius: 8px;
   color: #b91c1c;
+}
+
+.stats-grid .section-heading {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.stats-grid .section-heading .muted {
+  margin-left: 0;
 }
 
 @media (max-width: 960px) {

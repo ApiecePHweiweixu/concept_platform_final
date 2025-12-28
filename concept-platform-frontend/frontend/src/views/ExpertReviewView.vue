@@ -26,7 +26,11 @@
                 <span v-else class="muted small">无附件</span>
               </template>
             </el-table-column>
-            <el-table-column prop="techDomain" label="技术领域" width="150" />
+            <el-table-column prop="techDomain" label="技术领域" width="150">
+              <template #default="scope">
+                {{ formatTechDomain(scope.row.techDomain) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="deadline" label="截止时间" width="180">
                <template #default="scope">
                 {{ scope.row.deadline ? scope.row.deadline.replace('T', ' ') : '-' }}
@@ -43,7 +47,11 @@
         <el-tab-pane label="已评审" name="reviewed">
           <el-table :data="reviewedList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
-            <el-table-column prop="techDomain" label="技术领域" width="150" />
+            <el-table-column prop="techDomain" label="技术领域" width="150">
+              <template #default="scope">
+                {{ formatTechDomain(scope.row.techDomain) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="score" label="评分" width="100" />
             <el-table-column prop="reviewTime" label="评审时间" width="180">
               <template #default="scope">
@@ -58,7 +66,7 @@
     <el-dialog v-model="dialogVisible" title="项目评审" width="620px" @close="resetForm">
       <el-descriptions title="项目信息" :column="1" border>
         <el-descriptions-item label="项目名称">{{ currentProject.projectName }}</el-descriptions-item>
-        <el-descriptions-item label="技术领域">{{ currentProject.techDomain }}</el-descriptions-item>
+        <el-descriptions-item label="技术领域">{{ formatTechDomain(currentProject.techDomain) }}</el-descriptions-item>
         <el-descriptions-item label="项目简介">{{ currentProject.description }}</el-descriptions-item>
       </el-descriptions>
       <el-divider />
@@ -84,6 +92,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { getReviewList, submitReview } from '@/api/review'
 import { ElMessage } from 'element-plus'
+import { formatTechDomain } from '@/utils/format'
 
 const loading = ref(false)
 const dialogVisible = ref(false)

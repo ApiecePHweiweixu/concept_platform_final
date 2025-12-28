@@ -26,7 +26,11 @@
                 <span v-else class="muted small">无附件</span>
               </template>
             </el-table-column>
-            <el-table-column prop="techDomain" label="技术领域" width="150" />
+            <el-table-column prop="techDomain" label="技术领域" width="150">
+              <template #default="scope">
+                {{ formatTechDomain(scope.row.techDomain) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="createdAt" label="创建时间" width="180">
               <template #default="scope">
                 {{ scope.row.createdAt ? scope.row.createdAt.replace('T', ' ') : '' }}
@@ -43,7 +47,11 @@
         <el-tab-pane label="已审核" name="processed">
           <el-table :data="processedList" v-loading="loading" style="width: 100%" stripe class="tech-table">
             <el-table-column prop="projectName" label="项目名称" min-width="150" />
-            <el-table-column prop="techDomain" label="技术领域" width="150" />
+            <el-table-column prop="techDomain" label="技术领域" width="150">
+              <template #default="scope">
+                {{ formatTechDomain(scope.row.techDomain) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="当前状态" width="120">
               <template #default="scope">
                 <el-tag :type="getStatusType(scope.row.status)">
@@ -103,7 +111,7 @@
     <el-dialog v-model="detailVisible" title="项目详情" width="620px">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="项目名称">{{ currentDetail.projectName }}</el-descriptions-item>
-        <el-descriptions-item label="技术领域">{{ currentDetail.techDomain }}</el-descriptions-item>
+        <el-descriptions-item label="技术领域">{{ formatTechDomain(currentDetail.techDomain) }}</el-descriptions-item>
         <el-descriptions-item label="申报人">{{ currentDetail.applicantName || currentDetail.applicantId }}</el-descriptions-item>
         <el-descriptions-item label="项目简介">{{ currentDetail.description }}</el-descriptions-item>
         <el-descriptions-item label="附件">
@@ -132,6 +140,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { getList, auditProject } from '@/api/project'
 import { getExperts } from '@/api/user'
 import { ElMessage } from 'element-plus'
+import { formatTechDomain } from '@/utils/format'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
