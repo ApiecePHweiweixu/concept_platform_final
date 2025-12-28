@@ -16,9 +16,24 @@ export function getMyProjectList(params) {
   })
 }
 
+export function getProjectById(id) {
+  return request({
+    url: `/api/project/${id}`,
+    method: 'get'
+  })
+}
+
 export function addProject(data) {
   return request({
     url: '/api/project/add',
+    method: 'post',
+    data
+  })
+}
+
+export function updateProject(data) {
+  return request({
+    url: '/api/project/update',
     method: 'post',
     data
   })

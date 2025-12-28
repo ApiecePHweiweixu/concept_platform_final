@@ -11,9 +11,14 @@ import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -110,24 +115,162 @@ public class ProjectController {
 
     /**
      * 统计各技术领域项目数量（用于饼图）
+     * 支持多选领域，每个领域分别计数
+     * 只统计6种标准领域：人工智能、大数据与云计算、信息安全、物联网与嵌入式技术、数字人文技术、其他
      */
     @GetMapping("/stats/domain")
     public Result<List<StatItem>> getDomainStats() {
         List<Project> projects = projectService.list();
-        List<StatItem> stats = projects.stream()
-                .collect(Collectors.groupingBy(
-                        p -> p.getTechDomain() == null || p.getTechDomain().isBlank() ? "未分类" : p.getTechDomain(),
-                        Collectors.counting()))
-                .entrySet()
-                .stream()
-                .map(e -> {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Long> domainCountMap = new HashMap<>();
+        
+        // 初始化6种标准领域
+        domainCountMap.put("人工智能", 0L);
+        domainCountMap.put("大数据与云计算", 0L);
+        domainCountMap.put("信息安全", 0L);
+        domainCountMap.put("物联网与嵌入式技术", 0L);
+        domainCountMap.put("数字人文技术", 0L);
+        domainCountMap.put("其他", 0L);
+        
+        System.out.println("开始统计技术领域，项目总数: " + projects.size());
+        
+        for (Project project : projects) {
+            String techDomain = project.getTechDomain();
+            if (techDomain == null || techDomain.isBlank()) {
+                continue;
+            }
+            
+            System.out.println("处理项目: " + project.getProjectName() + ", techDomain: " + techDomain);
+            
+            List<String> domains = new ArrayList<>();
+            try {
+                // 尝试解析JSON数组
+                domains = objectMapper.readValue(techDomain, new TypeReference<List<String>>() {});
+                System.out.println("  JSON解析成功，得到: " + domains);
+            } catch (Exception e) {
+                // 如果不是JSON格式，尝试按逗号、斜杠、顿号分割（兼容旧数据）
+                // 使用正则表达式一次性分割所有分隔符
+                String[] parts = techDomain.split("[,/、]");
+                for (String part : parts) {
+                    String trimmed = part.trim();
+                    if (!trimmed.isEmpty()) {
+                        domains.add(trimmed);
+                    }
+                }
+                System.out.println("  按分隔符分割，得到: " + domains);
+            }
+            
+            // 标准化每个领域并分别计数
+            for (String domain : domains) {
+                if (domain == null || domain.trim().isEmpty()) {
+                    continue; // 跳过空值
+                }
+                String normalizedDomain = normalizeDomain(domain.trim());
+                System.out.println("    领域: " + domain + " -> 标准化为: " + normalizedDomain);
+                domainCountMap.put(normalizedDomain, domainCountMap.get(normalizedDomain) + 1);
+            }
+        }
+        
+        System.out.println("统计结果: " + domainCountMap);
+        
+        // 只返回有数据的领域，按固定顺序
+        List<String> standardDomains = Arrays.asList("人工智能", "大数据与云计算", "信息安全", 
+                "物联网与嵌入式技术", "数字人文技术", "其他");
+        List<StatItem> stats = standardDomains.stream()
+                .filter(domain -> domainCountMap.get(domain) > 0)
+                .map(domain -> {
                     StatItem item = new StatItem();
-                    item.setName(e.getKey());
-                    item.setValue(e.getValue());
+                    item.setName(domain);
+                    item.setValue(domainCountMap.get(domain));
                     return item;
                 })
                 .collect(Collectors.toList());
+        
+        System.out.println("返回的统计数据: " + stats.stream().map(s -> s.getName() + "=" + s.getValue()).collect(Collectors.joining(", ")));
+        
         return Result.success(stats);
+    }
+    
+    /**
+     * 标准化领域名称
+     * 将各种变体映射到6种标准领域
+     */
+    private String normalizeDomain(String domain) {
+        if (domain == null || domain.isBlank()) {
+            return "其他";
+        }
+        
+        String normalized = domain.trim();
+        
+        // 如果还包含逗号或斜杠，说明未正确分割，尝试提取第一个有效部分
+        if (normalized.contains(",") || normalized.contains("/") || normalized.contains("、")) {
+            // 尝试提取第一个部分
+            String[] parts = normalized.split("[,/、]");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    // 递归处理第一个有效部分
+                    return normalizeDomain(trimmed);
+                }
+            }
+            return "其他";
+        }
+        
+        // 处理"其他：xxx"格式
+        if (normalized.startsWith("其他") || normalized.startsWith("其他：")) {
+            return "其他";
+        }
+        
+        // 精确匹配标准领域（优先）
+        if (normalized.equals("人工智能")) {
+            return "人工智能";
+        }
+        if (normalized.equals("大数据与云计算")) {
+            return "大数据与云计算";
+        }
+        if (normalized.equals("信息安全")) {
+            return "信息安全";
+        }
+        if (normalized.equals("物联网与嵌入式技术")) {
+            return "物联网与嵌入式技术";
+        }
+        if (normalized.equals("数字人文技术")) {
+            return "数字人文技术";
+        }
+        
+        // 模糊匹配（包含关键词）- 注意顺序，更具体的先匹配
+        // 先检查包含多个关键词的情况
+        if ((normalized.contains("大数据") || normalized.contains("云计算")) 
+                && (normalized.contains("人工智能") || normalized.contains("AI"))) {
+            // 如果同时包含，需要分别处理，但这里只能返回一个，所以优先返回更匹配的
+            // 这种情况应该在上层分割时处理
+            return "其他";
+        }
+        
+        // 单个关键词匹配
+        if (normalized.contains("人工智能") || normalized.contains("AI") || normalized.contains("机器学习") 
+                || normalized.contains("自然语言处理") || normalized.contains("计算机视觉")
+                || normalized.contains("深度学习") || normalized.contains("神经网络")) {
+            return "人工智能";
+        }
+        if (normalized.contains("大数据") || normalized.contains("云计算") || normalized.contains("数据治理") 
+                || normalized.contains("分布式计算") || normalized.contains("数据挖掘")) {
+            return "大数据与云计算";
+        }
+        if (normalized.contains("信息安全") || normalized.contains("密码") || normalized.contains("数据脱敏") 
+                || normalized.contains("漏洞检测") || normalized.contains("网络安全")
+                || normalized.contains("加密")) {
+            return "信息安全";
+        }
+        if (normalized.contains("物联网") || normalized.contains("嵌入式")) {
+            return "物联网与嵌入式技术";
+        }
+        if (normalized.contains("数字人文") || normalized.contains("古籍数字化") || normalized.contains("文化遗产")) {
+            return "数字人文技术";
+        }
+        
+        // 默认归类为"其他"
+        return "其他";
     }
 
     /**
