@@ -302,8 +302,30 @@ INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments
 -- 项目1008（文化遗产数字化）的评审记录
 (5003, 1008, 3, 85, '项目将前沿AI技术应用于数字人文领域，社会文化价值显著。技术路线清晰，但部分细节如大规模数据处理的效率可进一步阐述。', '2024-11-12 09:15:00', 1),
 (5004, 1008, 5, 90, '成果具有鲜明的学科交叉特色，合作案例扎实，展示了成熟的技术应用能力。建议在产业化推广方面制定更具体的计划。', '2024-11-13 16:20:00', 1);
+
 -- 为项目1012插入专家评审记录
 INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments`, `review_time`, `status`) VALUES
 (5005, 1012, 3, 87, '项目选题精准，面向工业物联网的预测性维护需求明确。将声纹分析应用于电机早期故障检测是有效创新点，技术方案合理。建议进一步降低成本以增强市场竞争力。', '2024-11-14 11:20:00', 1),
 (5006, 1012, 4, 91, '技术实用性很强，已在水务和新能源汽车领域有成功试点，验证了方案的可靠性。多源数据融合的创新点提升了诊断精度。项目具备良好的产业化前景。', '2024-11-15 15:45:00', 1);
+
+-- 为评审中的项目（status=2）分配专家（状态为0，表示未评审）
+-- 项目1003（古籍智能标注与知识图谱构建系统）：分配李教授和张博士
+INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments`, `review_time`, `status`) VALUES
+(5007, 1003, 3, NULL, NULL, NULL, 0),
+(5008, 1003, 4, NULL, NULL, NULL, 0);
+
+-- 项目1007（大规模网络攻击智能感知与溯源系统）：分配张博士和李教授
+INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments`, `review_time`, `status`) VALUES
+(5009, 1007, 4, NULL, NULL, NULL, 0),
+(5010, 1007, 3, NULL, NULL, NULL, 0);
+
+-- 项目1010（面向科学计算的国产高性能稀疏矩阵计算库）：分配张博士
+INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments`, `review_time`, `status`) VALUES
+(5011, 1010, 4, NULL, NULL, NULL, 0);
+
+-- 项目1013（支持多方安全查询的政务数据开放平台）：分配张博士、李教授和陈专家
+INSERT INTO `review` (`review_id`, `project_id`, `expert_id`, `score`, `comments`, `review_time`, `status`) VALUES
+(5012, 1013, 4, NULL, NULL, NULL, 0),
+(5013, 1013, 3, NULL, NULL, NULL, 0),
+(5014, 1013, 5, NULL, NULL, NULL, 0);
 SET FOREIGN_KEY_CHECKS = 1; 
