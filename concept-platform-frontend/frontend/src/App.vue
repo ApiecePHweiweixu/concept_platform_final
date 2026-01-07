@@ -1,5 +1,59 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getIncubationReminders, getApplicantResourceList } from '@/api/incubation'
+
+const reminderVisible = ref(false)
+const reminderData = ref({
+  agreementReminders: [],
+  midtermReminders: [],
+  finalReminders: [],
+  resourceReminders: []
+})
+const loading = ref(false)
+
+const loadReminders = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+  try {
+    const user = JSON.parse(userStr)
+    if (user.role !== 'APPLICANT') return
+    const applicantId = user.userId || user.id || user.user_id
+    loading.value = true
+    const [remindersRes, resourceRes] = await Promise.all([
+      getIncubationReminders({ applicantId }),
+      getApplicantResourceList({ applicantId })
+    ])
+    const resourceDone = Array.isArray(resourceRes)
+      ? resourceRes.filter(r => r.status === 2)
+      : []
+    if (remindersRes && (remindersRes.agreementReminders || remindersRes.midtermReminders || remindersRes.finalReminders || resourceDone.length > 0)) {
+      reminderData.value = {
+        agreementReminders: remindersRes.agreementReminders || [],
+        midtermReminders: remindersRes.midtermReminders || [],
+        finalReminders: remindersRes.finalReminders || [],
+        resourceReminders: resourceDone || []
+      }
+      const totalCount = reminderData.value.agreementReminders.length + 
+                        reminderData.value.midtermReminders.length + 
+                        reminderData.value.finalReminders.length +
+                        reminderData.value.resourceReminders.length
+      if (totalCount > 0) {
+        reminderVisible.value = true
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  // 登录后的每次刷新都会检查一次提醒；若不提交材料，将持续弹出（用户可手动关闭）
+  loadReminders()
+})
 </script>
 
 <template>
@@ -17,6 +71,106 @@ import { RouterView } from 'vue-router'
       <div class="bg-lines lines-diagonal"></div>
     </div>
     <RouterView />
+
+    <!-- 孵化提醒弹窗：包含协议签署、中期汇报、最终提交三类提醒 -->
+    <el-dialog
+      v-model="reminderVisible"
+      title="孵化提醒"
+      width="680px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <el-alert
+        v-if="loading"
+        title="正在加载提醒..."
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px;"
+      />
+      <div v-else>
+        <!-- 待签署协议提醒 -->
+        <div v-if="reminderData.agreementReminders.length > 0" style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; color: #e6a23c;">待签署协议（{{ reminderData.agreementReminders.length }}）</h4>
+          <el-table :data="reminderData.agreementReminders" size="small" border style="width: 100%; margin-bottom: 8px;">
+            <el-table-column prop="projectName" label="项目名称" min-width="150" />
+            <el-table-column prop="createdAt" label="入孵时间" width="160">
+              <template #default="scope">
+                {{ scope.row.createdAt ? scope.row.createdAt.replace('T', ' ').substring(0, 16) : '-' }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <p class="muted small">请尽快在线签署《孵化服务协议》并填写《入孵信息表》</p>
+        </div>
+
+        <!-- 中期汇报提醒 -->
+        <div v-if="reminderData.midtermReminders.length > 0" style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; color: #409eff;">中期汇报提醒（{{ reminderData.midtermReminders.length }}）</h4>
+          <el-table :data="reminderData.midtermReminders" size="small" border style="width: 100%; margin-bottom: 8px;">
+            <el-table-column prop="projectName" label="项目名称" min-width="150" />
+            <el-table-column prop="milestoneName" label="里程碑" width="120" />
+            <el-table-column prop="deadline" label="截止日期" width="160">
+              <template #default="scope">
+                {{ scope.row.deadline ? scope.row.deadline.replace('T', ' ').substring(0, 16) : '待定' }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <p class="muted small">请提交中期进展报告，专家将进行中期评审与资源调整</p>
+        </div>
+
+        <!-- 最终提交提醒 -->
+        <div v-if="reminderData.finalReminders.length > 0" style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; color: #67c23a;">最终提交提醒（{{ reminderData.finalReminders.length }}）</h4>
+          <el-table :data="reminderData.finalReminders" size="small" border style="width: 100%; margin-bottom: 8px;">
+            <el-table-column prop="projectName" label="项目名称" min-width="150" />
+            <el-table-column prop="milestoneName" label="里程碑" width="120" />
+            <el-table-column prop="deadline" label="截止日期" width="160">
+              <template #default="scope">
+                {{ scope.row.deadline ? scope.row.deadline.replace('T', ' ').substring(0, 16) : '待定' }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <p class="muted small">请提交最终成果材料，完成孵化立项，专家将进行结项/毕业评审</p>
+        </div>
+
+        <!-- 资源分配结果提醒 -->
+        <div v-if="reminderData.resourceReminders.length > 0" style="margin-bottom: 16px;">
+          <h4 style="margin: 0 0 8px 0; color: #f56c6c;">资源分配结果（{{ reminderData.resourceReminders.length }}）</h4>
+          <el-table :data="reminderData.resourceReminders" size="small" border style="width: 100%; margin-bottom: 8px;">
+            <el-table-column prop="projectName" label="项目名称" min-width="150" />
+            <el-table-column prop="type" label="资源类型" width="120">
+              <template #default="scope">
+                <span>
+                  <!-- 简单类型映射，避免重新引入工具函数 -->
+                  {{ scope.row.type === 'FUNDING' ? '拨款支持' :
+                     scope.row.type === 'SERVER' ? '服务器/算力' :
+                     scope.row.type === 'SUPPORT' ? '技术支持' :
+                     scope.row.type === 'INTERNSHIP' ? '企业实习' :
+                     scope.row.type === 'MENTOR' ? '辅导/陪跑' :
+                     scope.row.type === 'FUND' ? '融资路演机会' :
+                     scope.row.type === 'MARKET' ? '市场渠道对接' :
+                     scope.row.type === 'IP' ? '知识产权辅导' :
+                     scope.row.type === 'TECH' ? '技术咨询' : scope.row.type }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="title" label="标题" min-width="160" />
+            <el-table-column prop="createdAt" label="处理时间" width="180">
+              <template #default="scope">
+                {{ scope.row.createdAt ? scope.row.createdAt.replace('T', ' ').substring(0, 16) : '-' }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <p class="muted small">以上资源申请已由导师/管理员处理，状态为“已完成”，请留意处理说明及后续对接。</p>
+        </div>
+      </div>
+      <p class="muted small" style="margin-top: 12px;">
+        提示：在您完成材料提交之前，每次进入平台首页都会弹出此提醒。您也可以暂时关闭弹窗，稍后再处理。
+      </p>
+      <template #footer>
+        <el-button @click="reminderVisible = false">稍后再说</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

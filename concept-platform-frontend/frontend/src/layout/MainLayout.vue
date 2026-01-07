@@ -16,6 +16,10 @@
             <el-icon><Document /></el-icon>
             <span>我的项目</span>
           </el-menu-item>
+          <el-menu-item index="/my-incubation-projects">
+            <el-icon><Finished /></el-icon>
+            <span>我的孵化项目</span>
+          </el-menu-item>
           <el-menu-item index="/project/add">
             <el-icon><Plus /></el-icon>
             <span>新建申报</span>
@@ -27,6 +31,10 @@
             <el-icon><Finished /></el-icon>
             <span>项目审核</span>
           </el-menu-item>
+          <el-menu-item index="/incubation-manage">
+            <el-icon><Document /></el-icon>
+            <span>孵化项目管理</span>
+          </el-menu-item>
         </template>
 
         <template v-if="userRole === 'EXPERT'">
@@ -34,7 +42,16 @@
             <el-icon><ChatDotSquare /></el-icon>
             <span>评审任务</span>
           </el-menu-item>
+          <el-menu-item index="/mentor-projects">
+            <el-icon><User /></el-icon>
+            <span>我的辅导项目</span>
+          </el-menu-item>
         </template>
+        
+        <el-menu-item index="/success-cases">
+          <el-icon><Trophy /></el-icon>
+          <span>成功案例库</span>
+        </el-menu-item>
       </el-menu>
     </aside>
 
@@ -62,7 +79,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Document, Plus, Finished, ChatDotSquare } from '@element-plus/icons-vue'
+import { Document, Plus, Finished, ChatDotSquare, User, Trophy } from '@element-plus/icons-vue'
 import logoUrl from '../../renmin-university-of-china-logo-1024px.png'
 
 const router = useRouter()
@@ -132,10 +149,10 @@ const logout = () => {
 }
 
 .brand-logo {
-  width: 130%;
-  height: 130%;
+  width: 124%;
+  height: 124%;
   object-fit: contain;
-  transform: translateY(4%);
+  transform: translateY(3%);
   filter: drop-shadow(0 0 8px rgba(148, 27, 27, 0.4));
 }
 

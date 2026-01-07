@@ -60,11 +60,20 @@ public class ReviewController {
     // Submit Review
     @PostMapping("/submit")
     public Result<Boolean> submit(@RequestBody SubmitReviewDto dto) {
-        if (dto.getReviewId() == null || dto.getScore() == null) {
-            return Result.error("Review ID and Score are required");
+        if (dto.getReviewId() == null
+                || dto.getFeasibilityScore() == null
+                || dto.getDepthScore() == null
+                || dto.getExtensionScore() == null) {
+            return Result.error("评分维度不能为空");
         }
         // Ensure comments is passed
-        return Result.success(reviewService.submitReview(dto.getReviewId(), dto.getScore(), dto.getComments()));
+        return Result.success(reviewService.submitReview(
+                dto.getReviewId(),
+                dto.getFeasibilityScore(),
+                dto.getDepthScore(),
+                dto.getExtensionScore(),
+                dto.getComments()
+        ));
     }
 
     // Update / Submit Review (Old generic update)
@@ -87,7 +96,10 @@ public class ReviewController {
     @Data
     public static class SubmitReviewDto {
         private Integer reviewId;
-        private Integer score;
+        // 多维度评分
+        private Integer feasibilityScore;
+        private Integer depthScore;
+        private Integer extensionScore;
         private String comments; // Confirmed field name is comments
     }
 }

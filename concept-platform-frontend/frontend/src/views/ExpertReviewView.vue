@@ -70,9 +70,15 @@
         <el-descriptions-item label="项目简介">{{ currentProject.description }}</el-descriptions-item>
       </el-descriptions>
       <el-divider />
-      <el-form :model="form" ref="formRef" :rules="rules" label-width="80px" style="margin-top: 10px;" class="tech-form">
-        <el-form-item label="评分" prop="score">
-          <el-input-number v-model="form.score" :min="0" :max="100" />
+      <el-form :model="form" ref="formRef" :rules="rules" label-width="100px" style="margin-top: 10px;" class="tech-form">
+        <el-form-item label="可行性" prop="feasibilityScore">
+          <el-input-number v-model="form.feasibilityScore" :min="0" :max="100" />
+        </el-form-item>
+        <el-form-item label="深度" prop="depthScore">
+          <el-input-number v-model="form.depthScore" :min="0" :max="100" />
+        </el-form-item>
+        <el-form-item label="拓展度" prop="extensionScore">
+          <el-input-number v-model="form.extensionScore" :min="0" :max="100" />
         </el-form-item>
         <el-form-item label="评语" prop="comment">
           <el-input v-model="form.comment" type="textarea" rows="4" placeholder="请输入评语" />
@@ -105,12 +111,16 @@ const formRef = ref(null)
 const form = reactive({
   reviewId: null,
   projectId: null,
-  score: 80,
+  feasibilityScore: 80,
+  depthScore: 80,
+  extensionScore: 80,
   comment: ''
 })
 
 const rules = {
-  score: [{ required: true, message: '请输入评分', trigger: 'blur' }],
+  feasibilityScore: [{ required: true, message: '请输入可行性评分', trigger: 'blur' }],
+  depthScore: [{ required: true, message: '请输入深度评分', trigger: 'blur' }],
+  extensionScore: [{ required: true, message: '请输入拓展度评分', trigger: 'blur' }],
   comment: [{ required: true, message: '请输入评语', trigger: 'blur' }]
 }
 
@@ -151,7 +161,9 @@ const handleReview = (row) => {
   form.reviewId = row.reviewId || row.id 
   form.projectId = row.projectId
   currentProject.value.description = row.description || row.projectDescription || '暂无简介'
-  form.score = 80
+  form.feasibilityScore = 80
+  form.depthScore = 80
+  form.extensionScore = 80
   form.comment = ''
   dialogVisible.value = true
 }
@@ -175,7 +187,9 @@ const submit = async () => {
       const submitData = {
         reviewId: form.reviewId,
         projectId: form.projectId,
-        score: form.score,
+        feasibilityScore: form.feasibilityScore,
+        depthScore: form.depthScore,
+        extensionScore: form.extensionScore,
         comments: form.comment
       }
 

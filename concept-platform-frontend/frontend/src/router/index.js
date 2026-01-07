@@ -27,6 +27,11 @@ const router = createRouter({
           component: () => import('../views/MyProjects.vue')
         },
         {
+          path: 'my-incubation-projects',
+          name: 'my-incubation-projects',
+          component: () => import('../views/MyIncubationProjects.vue')
+        },
+        {
           path: 'project/add',
           name: 'project-add',
           component: () => import('../views/ProjectFormView.vue')
@@ -42,9 +47,24 @@ const router = createRouter({
           component: () => import('../views/AuditProjects.vue')
         },
         {
+          path: 'incubation-manage',
+          name: 'incubation-manage',
+          component: () => import('../views/IncubationManageView.vue')
+        },
+        {
           path: 'expert-reviews',
           name: 'expert-reviews',
           component: () => import('../views/ExpertReviewView.vue')
+        },
+        {
+          path: 'success-cases',
+          name: 'success-cases',
+          component: () => import('../views/SuccessCaseView.vue')
+        },
+        {
+          path: 'mentor-projects',
+          name: 'mentor-projects',
+          component: () => import('../views/MentorProjectsView.vue')
         }
       ]
     }

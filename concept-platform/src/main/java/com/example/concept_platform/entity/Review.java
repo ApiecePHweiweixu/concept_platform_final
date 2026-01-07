@@ -20,7 +20,24 @@ public class Review {
 
     private Integer expertId;
 
+    /**
+     * 单维旧总分（兼容历史数据），保留字段
+     */
     private Integer score;
+
+    /**
+     * 多维度评分：可行性、深度、拓展度
+     */
+    private Integer scoreFeasibility;
+
+    private Integer scoreDepth;
+
+    private Integer scoreExtension;
+
+    /**
+     * 加权总分，后端根据多维分自动计算
+     */
+    private Integer totalScore;
 
     private String comments;
 
