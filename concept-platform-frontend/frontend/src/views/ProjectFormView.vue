@@ -183,20 +183,15 @@ const handleUploadError = (error) => {
   ElMessage.error('上传失败，请检查网络或后端接口')
 }
 
-// 解析techDomain字符串为数组
+// 解析techDomain字符串为数组（逗号分隔）
 const parseTechDomain = (techDomainStr) => {
   if (!techDomainStr) return []
-  try {
-    const parsed = JSON.parse(techDomainStr)
-    if (Array.isArray(parsed)) {
-      return parsed
-    }
-  } catch (e) {
-    // 如果不是JSON，尝试按逗号分割
+  // 直接按逗号分割
+  if (typeof techDomainStr === 'string') {
     if (techDomainStr.includes(',')) {
-      return techDomainStr.split(',').map(s => s.trim())
+      return techDomainStr.split(',').map(s => s.trim()).filter(s => s)
     }
-    return [techDomainStr]
+    return [techDomainStr.trim()].filter(s => s)
   }
   return []
 }
@@ -263,14 +258,14 @@ const handleSubmit = async () => {
           }
         }
 
-        // 处理成果领域（多选转JSON）
-        let techDomainStr = JSON.stringify(form.techDomainArray)
+        // 处理成果领域（多选转逗号分隔字符串）
+        let techDomainStr = form.techDomainArray.join(',')
         if (form.techDomainArray.includes('其他') && form.techDomainOther) {
-          techDomainStr = JSON.stringify([...form.techDomainArray.filter(d => d !== '其他'), `其他：${form.techDomainOther}`])
+          techDomainStr = [...form.techDomainArray.filter(d => d !== '其他'), `其他：${form.techDomainOther}`].join(',')
         }
         
-        // 处理合作需求（多选转JSON）
-        const cooperationNeedStr = JSON.stringify(form.cooperationNeedArray)
+        // 处理合作需求（多选转逗号分隔字符串）
+        const cooperationNeedStr = form.cooperationNeedArray.join(',')
 
         const submitData = {
           projectName: form.projectName,

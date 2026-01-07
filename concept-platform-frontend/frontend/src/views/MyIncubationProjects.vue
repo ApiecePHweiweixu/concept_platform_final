@@ -135,12 +135,12 @@
             placeholder="说明完成情况、遇到的问题、下一步计划"
           />
         </el-form-item>
-        <el-form-item label="附件(JSON)" required>
+        <el-form-item label="附件" required>
           <el-input
             v-model="reportForm.attachments"
             type="textarea"
             rows="3"
-            placeholder='例如 [{"name":"演示视频","url":"/uploads/demo.mp4"}]'
+            placeholder="请输入附件URL，多个附件用逗号分隔，例如：/uploads/demo.mp4, /uploads/report.pdf"
           />
         </el-form-item>
       </el-form>
