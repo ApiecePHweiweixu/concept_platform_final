@@ -45,6 +45,8 @@ public class Project {
     private Integer status;
 
     private Integer applicantId;
+    
+    private java.math.BigDecimal finalScore; // 评审最终平均分
 
     private LocalDateTime createdAt;
 }

@@ -59,6 +59,14 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column prop="finalScore" label="评审得分" width="100">
+              <template #default="scope">
+                <span v-if="scope.row.status === 3 || scope.row.status === 9" :class="scope.row.finalScore >= 60 ? 'text-success' : 'text-danger'">
+                  {{ scope.row.finalScore || '-' }}
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="auditTime" label="审核时间" width="180">
               <template #default="scope">
                 {{ scope.row.auditTime ? scope.row.auditTime.replace('T', ' ') : '-' }}
@@ -75,6 +83,52 @@
     </el-card>
 
     <el-dialog v-model="dialogVisible" title="项目审核" width="520px" @close="resetForm">
+      <!-- AI 辅助意见 -->
+      <div v-if="aiAnalysis" class="ai-analysis-box mb-4">
+        <div class="ai-header" @click="showAiDetails = !showAiDetails">
+          <div class="ai-title">
+            <el-icon class="ai-icon"><Cpu /></el-icon>
+            <span>AI 辅助初筛意见</span>
+            <el-tag v-if="aiAnalysis.status === 0" type="warning" size="small" class="ml-2">分析中...</el-tag>
+            <el-tag v-else-if="aiAnalysis.status === 1" type="success" size="small" class="ml-2">已完成</el-tag>
+          </div>
+          <el-icon><ArrowDown v-if="!showAiDetails" /><ArrowUp v-else /></el-icon>
+        </div>
+        
+        <el-collapse-transition>
+          <div v-show="showAiDetails" class="ai-content">
+            <template v-if="aiAnalysis.status === 1">
+              <div class="ai-scores">
+                <div class="score-item">
+                  <span class="label">创新性</span>
+                  <el-progress type="circle" :percentage="aiAnalysis.innovationScore" :width="50" :stroke-width="4" />
+                </div>
+                <div class="score-item">
+                  <span class="label">可行性</span>
+                  <el-progress type="circle" :percentage="aiAnalysis.feasibilityScore" :width="50" :stroke-width="4" />
+                </div>
+                <div class="score-item">
+                  <span class="label">市场潜力</span>
+                  <el-progress type="circle" :percentage="aiAnalysis.marketScore" :width="50" :stroke-width="4" />
+                </div>
+              </div>
+              <div class="ai-summary">
+                <strong>综合评价：</strong>{{ aiAnalysis.analysisSummary }}
+              </div>
+              <div class="ai-risks mt-2">
+                <strong>风险提示：</strong><span class="text-danger">{{ aiAnalysis.riskWarning }}</span>
+              </div>
+            </template>
+            <template v-else-if="aiAnalysis.status === 0">
+              <div class="p-4 text-center muted">AI 正在努力分析中，请稍后重试或刷新...</div>
+            </template>
+            <template v-else>
+              <div class="p-4 text-center text-danger">AI 分析失败，请检查 API 配置或重试。</div>
+            </template>
+          </div>
+        </el-collapse-transition>
+      </div>
+
       <el-form :model="auditForm" label-width="80px" class="tech-form">
         <el-form-item label="审核结果">
           <el-radio-group v-model="auditForm.action">
@@ -84,13 +138,17 @@
         </el-form-item>
 
         <template v-if="auditForm.action === 'PASS'">
+          <el-form-item label="项目领域">
+            <el-tag type="info" size="small">{{ formatTechDomain(auditForm.projectTechDomain) }}</el-tag>
+          </el-form-item>
           <el-form-item label="指派专家" required>
             <el-checkbox-group v-model="auditForm.expertIds">
-              <el-checkbox v-for="item in expertList" :key="item.userId" :label="item.userId">
+              <el-checkbox v-for="item in filteredExpertList" :key="item.userId" :label="item.userId">
                 {{ item.realName || item.username }} ({{ item.field || '通用' }})
               </el-checkbox>
             </el-checkbox-group>
-            <div class="muted small">请选择 1-3 名专家</div>
+            <div v-if="filteredExpertList.length === 0" class="text-danger small">该领域暂无匹配专家，请先在用户管理中添加相关领域的专家。</div>
+            <div v-else class="muted small">已自动筛选 [{{ formatTechDomain(auditForm.projectTechDomain) }}] 领域的专家。请选择 1-3 名。</div>
           </el-form-item>
         </template>
 
@@ -137,10 +195,11 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { getList, auditProject } from '@/api/project'
+import { getList, auditProject, getAiAnalysis } from '@/api/project'
 import { getExperts } from '@/api/user'
 import { ElMessage } from 'element-plus'
 import { formatTechDomain } from '@/utils/format'
+import { Cpu, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -151,11 +210,35 @@ const activeTab = ref('pending')
 const allProjects = ref([])
 const currentDetail = ref({})
 
+// AI 分析相关
+const aiAnalysis = ref(null)
+const showAiDetails = ref(true)
+
 const auditForm = reactive({
   projectId: null,
   action: 'PASS',
   expertIds: [],
-  comment: ''
+  comment: '',
+  projectTechDomain: '' // 新增：记录当前审核项目的领域
+})
+
+// 计算属性：根据项目领域严格过滤专家列表
+const filteredExpertList = computed(() => {
+  if (!auditForm.projectTechDomain) return []
+  
+  // 提取项目的领域关键词
+  let domains = []
+  try {
+    domains = JSON.parse(auditForm.projectTechDomain)
+  } catch (e) {
+    domains = auditForm.projectTechDomain.split(/[,/、]/).filter(s => s.trim())
+  }
+  
+  // 仅保留领域匹配的专家
+  return expertList.value.filter(expert => {
+    if (!expert.field) return false
+    return domains.some(d => expert.field.includes(d) || d.includes(expert.field))
+  })
 })
 
 const pendingList = computed(() => {
@@ -225,12 +308,23 @@ const getFullUrl = (url) => {
   return `http://localhost:8080${url}`
 }
 
-const handleAudit = (row) => {
-  auditForm.projectId = row.id || row.projectId
+const handleAudit = async (row) => {
+  const projectId = row.id || row.projectId
+  auditForm.projectId = projectId
+  auditForm.projectTechDomain = row.techDomain || ''
   auditForm.action = 'PASS'
   auditForm.expertIds = []
   auditForm.comment = ''
   dialogVisible.value = true
+  
+  // 加载 AI 分析结果
+  aiAnalysis.value = null
+  try {
+    const res = await getAiAnalysis(projectId)
+    aiAnalysis.value = res
+  } catch (e) {
+    console.error('Failed to load AI analysis', e)
+  }
 }
 
 const handleView = (row) => {
@@ -304,5 +398,77 @@ onMounted(() => {
 
 .muted.small {
   font-size: 12px;
+}
+
+/* AI Analysis Box Styles */
+.ai-analysis-box {
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 8px;
+  background-color: var(--el-color-primary-light-9);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ai-header {
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background-color: var(--el-color-primary-light-8);
+  transition: background-color 0.3s;
+}
+
+.ai-header:hover {
+  background-color: var(--el-color-primary-light-7);
+}
+
+.ai-title {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  color: var(--el-color-primary);
+}
+
+.ai-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.ai-content {
+  padding: 15px;
+  border-top: 1px solid var(--el-color-primary-light-7);
+}
+
+.ai-scores {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 15px;
+}
+
+.score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.score-item .label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.ai-summary {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--el-text-color-primary);
+}
+
+.ai-risks {
+  font-size: 13px;
+  padding: 8px 12px;
+  background-color: #fff;
+  border-radius: 4px;
+  border-left: 4px solid var(--el-color-danger);
 }
 </style>

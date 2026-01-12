@@ -49,10 +49,22 @@ public class ProjectController {
         return Result.success(projectService.getById(id));
     }
 
+    @Autowired
+    private com.example.concept_platform.service.IAIService aiService;
+
     // Add (Simplified, using entity directly)
     @PostMapping("/add")
     public Result<Boolean> add(@RequestBody Project project) {
-        return Result.success(projectService.save(project));
+        boolean saved = projectService.save(project);
+        if (saved) {
+            // 异步触发AI审核
+            try {
+                aiService.analyzeProject(project);
+            } catch (Exception e) {
+                System.err.println("Failed to trigger AI analysis: " + e.getMessage());
+            }
+        }
+        return Result.success(saved);
     }
 
     // Update
@@ -74,6 +86,9 @@ public class ProjectController {
         query.orderByDesc("created_at"); // 按时间倒序
         return Result.success(projectService.list(query));
     }
+
+    @Autowired
+    private com.example.concept_platform.service.IProjectAiAnalysisService aiAnalysisService;
 
     // Get Project Result
     @GetMapping("/result/{projectId}")
@@ -111,6 +126,15 @@ public class ProjectController {
         resultVO.setReviews(simpleReviews);
         
         return Result.success(resultVO);
+    }
+
+    @GetMapping("/ai-analysis/{projectId}")
+    public Result<com.example.concept_platform.entity.ProjectAiAnalysis> getAiAnalysis(@PathVariable Integer projectId) {
+        QueryWrapper<com.example.concept_platform.entity.ProjectAiAnalysis> query = new QueryWrapper<>();
+        query.eq("project_id", projectId);
+        query.orderByDesc("created_at");
+        query.last("LIMIT 1");
+        return Result.success(aiAnalysisService.getOne(query));
     }
 
     /**

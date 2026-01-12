@@ -95,6 +95,9 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
 
                 Project project = projectMapper.selectById(review.getProjectId());
                 if (project != null) {
+                    // 保存最终得分
+                    project.setFinalScore(java.math.BigDecimal.valueOf(avgScore));
+                    
                     if (avgScore >= 60) {
                         // 概念验证通过：项目进入“已入库”，并自动创建孵化项目与两阶段里程碑
                         project.setStatus(3);

@@ -565,8 +565,35 @@ public class IncubationController {
         return Result.success(resourceRequestService.save(request));
     }
 
+    @Autowired
+    private com.example.concept_platform.service.IResourceInventoryService resourceInventoryService;
+
     /**
-     * 项目经理/专家：处理资源申请
+     * 管理员：查看所有资源库存
+     */
+    @GetMapping("/resource/inventory/list")
+    public Result<List<com.example.concept_platform.entity.ResourceInventory>> listInventory() {
+        return Result.success(resourceInventoryService.list());
+    }
+
+    /**
+     * 专家：根据申请需求获取匹配的可用资源
+     */
+    @GetMapping("/resource/inventory/match")
+    public Result<List<com.example.concept_platform.entity.ResourceInventory>> matchInventory(@RequestParam String type) {
+        // 将前端申请类型转换为后端库存分类
+        String typeKey = switch (type) {
+            case "SERVER", "COMPUTING", "算力" -> "COMPUTING";
+            case "FUND", "FUNDING", "资金", "拨款" -> "FUND";
+            case "SPACE", "OFFICE", "场地" -> "SPACE";
+            case "TECH", "IP", "MARKET", "SERVICE", "服务" -> "SERVICE";
+            default -> "SERVICE"; // 默认归为服务类
+        };
+        return Result.success(resourceInventoryService.listByType(typeKey));
+    }
+
+    /**
+     * 项目经理/专家：处理资源申请（带库存分配）
      */
     @PostMapping("/resource/handle")
     public Result<Boolean> handleResource(@RequestBody ResourceHandleDto dto) {
@@ -577,28 +604,86 @@ public class IncubationController {
         if (request == null) {
             return Result.error("资源申请不存在");
         }
-        // 专家/项目经理处理后，直接视为完成分配，状态从待处理(0)直接变为已完成(2)
+
+        // 如果分配了具体库存
+        if (dto.getAllocatedResourceId() != null && dto.getAllocatedAmount() != null) {
+            com.example.concept_platform.entity.ResourceInventory inventory = resourceInventoryService.getById(dto.getAllocatedResourceId());
+            if (inventory == null) {
+                return Result.error("指定的资源库不存在");
+            }
+            if (inventory.getRemainingQuota().compareTo(dto.getAllocatedAmount()) < 0) {
+                return Result.error("库存余额不足，当前剩余：" + inventory.getRemainingQuota() + inventory.getUnit());
+            }
+            
+            // 扣减库存
+            inventory.setRemainingQuota(inventory.getRemainingQuota().subtract(dto.getAllocatedAmount()));
+            resourceInventoryService.updateById(inventory);
+            
+            // 关联申请单
+            request.setAllocatedResourceId(dto.getAllocatedResourceId());
+            request.setAllocatedAmount(dto.getAllocatedAmount());
+        }
+
+        // 专家/项目经理处理后，状态从待处理(0)直接变为已完成(2)
         request.setStatus(2);
         if (dto.getHandlerId() != null) {
             request.setHandlerId(dto.getHandlerId());
         }
         if (dto.getHistoryJson() != null && !dto.getHistoryJson().isEmpty()) {
-            // 追加处理历史
             String existingHistory = request.getHistoryJson();
             String newHistory = dto.getHistoryJson();
-            if (existingHistory != null && !existingHistory.isEmpty()) {
-                // 如果已有历史，追加新记录
-                request.setHistoryJson(existingHistory + "\n" + newHistory);
-            } else {
-                request.setHistoryJson(newHistory);
-            }
+            request.setHistoryJson((existingHistory != null && !existingHistory.isEmpty()) 
+                ? existingHistory + "\n" + newHistory : newHistory);
         }
         request.setUpdatedAt(LocalDateTime.now());
-        boolean result = resourceRequestService.updateById(request);
-        if (!result) {
-            return Result.error("更新资源申请失败");
-        }
-        return Result.success(true);
+        return Result.success(resourceRequestService.updateById(request));
+    }
+
+    /**
+     * 申报人：获取项目已分配的实物资产列表
+     */
+    @GetMapping("/resource/my-assets")
+    public Result<List<MyAssetVO>> getMyAssets(@RequestParam Integer projectId) {
+        QueryWrapper<IncubationResourceRequest> query = new QueryWrapper<>();
+        query.eq("project_id", projectId);
+        query.eq("status", 2); // 已完成
+        query.isNotNull("allocated_resource_id");
+        List<IncubationResourceRequest> requests = resourceRequestService.list(query);
+        
+        List<MyAssetVO> assets = requests.stream().map(req -> {
+            MyAssetVO vo = new MyAssetVO();
+            com.example.concept_platform.entity.ResourceInventory inventory = resourceInventoryService.getById(req.getAllocatedResourceId());
+            if (inventory != null) {
+                vo.setResourceName(inventory.getResourceName());
+                vo.setResourceType(inventory.getResourceType());
+                vo.setUnit(inventory.getUnit());
+            }
+            vo.setAllocatedAmount(req.getAllocatedAmount());
+            vo.setAllocatedTime(req.getUpdatedAt());
+            vo.setHandlingHistory(req.getHistoryJson());
+            return vo;
+        }).collect(Collectors.toList());
+        
+        return Result.success(assets);
+    }
+
+    @Data
+    public static class MyAssetVO {
+        private String resourceName;
+        private String resourceType;
+        private java.math.BigDecimal allocatedAmount;
+        private String unit;
+        private LocalDateTime allocatedTime;
+        private String handlingHistory;
+    }
+
+    /**
+     * 管理员：更新资源库存（补仓）
+     */
+    @PostMapping("/resource/inventory/update")
+    public Result<Boolean> updateInventory(@RequestBody com.example.concept_platform.entity.ResourceInventory inventory) {
+        if (inventory.getResourceId() == null) return Result.error("ID不能为空");
+        return Result.success(resourceInventoryService.updateById(inventory));
     }
 
     /**
@@ -1081,6 +1166,9 @@ public class IncubationController {
         private Integer status;
         private Integer handlerId;
         private String historyJson;
+        // 新增字段
+        private Integer allocatedResourceId;
+        private java.math.BigDecimal allocatedAmount;
     }
 
     @Data

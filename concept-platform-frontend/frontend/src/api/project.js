@@ -62,3 +62,10 @@ export function getStatusStats() {
     method: 'get'
   })
 }
+
+export function getAiAnalysis(projectId) {
+  return request({
+    url: `/api/project/ai-analysis/${projectId}`,
+    method: 'get'
+  })
+}

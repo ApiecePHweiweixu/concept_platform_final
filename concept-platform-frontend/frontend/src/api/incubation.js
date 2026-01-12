@@ -195,4 +195,36 @@ export function getApplicantResourceList(params) {
   })
 }
 
+// 资源实体化相关接口
+export function getInventoryList() {
+  return request({
+    url: '/api/incubation/resource/inventory/list',
+    method: 'get'
+  })
+}
+
+export function matchInventory(type) {
+  return request({
+    url: '/api/incubation/resource/inventory/match',
+    method: 'get',
+    params: { type }
+  })
+}
+
+export function updateInventory(data) {
+  return request({
+    url: '/api/incubation/resource/inventory/update',
+    method: 'post',
+    data
+  })
+}
+
+export function getMyAssets(projectId) {
+  return request({
+    url: '/api/incubation/resource/my-assets',
+    method: 'get',
+    params: { projectId }
+  })
+}
+
 

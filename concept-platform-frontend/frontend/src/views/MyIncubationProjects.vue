@@ -59,6 +59,15 @@
               申请资源
             </el-button>
             <el-button
+              v-if="scope.row.status === 1"
+              type="success"
+              link
+              size="small"
+              @click="openAssetDrawer(scope.row)"
+            >
+              我的资产
+            </el-button>
+            <el-button
               v-if="scope.row.status === 1 && (scope.row.completionStatus === 0 || scope.row.completionStatus === 4 || scope.row.completionStatus === 5)"
               type="danger"
               link
@@ -179,6 +188,34 @@
       </template>
     </el-dialog>
 
+    <!-- 我的资产侧边栏 -->
+    <el-drawer v-model="assetDrawerVisible" title="已获资源包（我的资产）" size="500px">
+      <div v-if="myAssets.length === 0" class="p-4 text-center muted">
+        暂无已分配的实物资产，请先提交资源申请。
+      </div>
+      <div v-else class="asset-list">
+        <el-card v-for="(asset, index) in myAssets" :key="index" class="asset-card mb-3" shadow="hover">
+          <div class="asset-item">
+            <div class="asset-main">
+              <div class="asset-name">{{ asset.resourceName }}</div>
+              <div class="asset-amount">
+                <span class="number">{{ asset.allocatedAmount }}</span>
+                <span class="unit">{{ asset.unit }}</span>
+              </div>
+            </div>
+            <div class="asset-footer">
+              <el-tag size="small" type="success">已入账</el-tag>
+              <span class="time">{{ asset.allocatedTime ? asset.allocatedTime.replace('T', ' ').substring(0, 16) : '' }}</span>
+            </div>
+            <div v-if="asset.handlingHistory" class="asset-history mt-2">
+              <div class="small-title">处理反馈：</div>
+              <div class="history-content">{{ asset.handlingHistory }}</div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </el-drawer>
+
     <!-- 落成申请 -->
     <el-dialog v-model="completionVisible" title="落成申请" width="620px">
       <el-form :model="completionForm" label-width="100px" class="tech-form">
@@ -211,7 +248,8 @@ import {
   getMilestones,
   submitMilestoneReport,
   applyResource,
-  applyCompletion
+  applyCompletion,
+  getMyAssets
 } from '@/api/incubation'
 
 const loading = ref(false)
@@ -255,6 +293,9 @@ const completionForm = ref({
   completionDesc: ''
 })
 const savingCompletion = ref(false)
+
+const assetDrawerVisible = ref(false)
+const myAssets = ref([])
 
 const getStatusType = (status) => {
   const map = {
@@ -477,6 +518,17 @@ const openCompletionDialog = (row) => {
   completionVisible.value = true
 }
 
+const openAssetDrawer = async (row) => {
+  assetDrawerVisible.value = true
+  myAssets.value = []
+  try {
+    const res = await getMyAssets(row.projectId)
+    myAssets.value = Array.isArray(res) ? res : []
+  } catch (e) {
+    console.error('加载资产失败', e)
+  }
+}
+
 const submitCompletion = async () => {
   if (!completionForm.value.completionPackageUrl) {
     ElMessage.warning('请填写材料包URL')
@@ -513,6 +565,54 @@ refresh()
 
 .small {
   font-size: 12px;
+}
+
+.asset-card {
+  border-left: 4px solid var(--el-color-success);
+}
+
+.asset-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.asset-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.asset-amount .number {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--el-color-success);
+}
+
+.asset-amount .unit {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.asset-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.small-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.history-content {
+  font-size: 13px;
+  background: var(--bg-muted);
+  padding: 8px;
+  border-radius: 4px;
 }
 </style>
 

@@ -168,6 +168,26 @@
             <el-option label="已拒绝" :value="3" />
           </el-select>
         </el-form-item>
+
+        <!-- 实体资源分配逻辑 -->
+        <template v-if="handleResourceForm.status === 2">
+          <el-divider content-position="left">实物资源分配</el-divider>
+          <el-form-item label="分配资源库">
+            <el-select v-model="handleResourceForm.allocatedResourceId" placeholder="从可用库存中选择" style="width: 100%">
+              <el-option
+                v-for="item in matchingInventory"
+                :key="item.resourceId"
+                :label="`${item.resourceName} (余量: ${item.remainingQuota}${item.unit})`"
+                :value="item.resourceId"
+              />
+            </el-select>
+            <div v-if="matchingInventory.length === 0" class="text-danger small">该类型暂无可用库存资源</div>
+          </el-form-item>
+          <el-form-item label="分配数量">
+            <el-input-number v-model="handleResourceForm.allocatedAmount" :min="0" style="width: 100%" />
+          </el-form-item>
+        </template>
+
         <el-form-item label="处理说明">
           <el-input
             v-model="handleResourceForm.historyJson"
@@ -225,7 +245,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getMentorIncubationProjects, getMilestones, getMilestoneReports, reviewMilestoneReport, getMentorResourceList, handleResource, expertScoreMilestoneReport, expertReviewCompletion } from '@/api/incubation'
+import { getMentorIncubationProjects, getMilestones, getMilestoneReports, reviewMilestoneReport, getMentorResourceList, handleResource, expertScoreMilestoneReport, expertReviewCompletion, matchInventory } from '@/api/incubation'
 
 const tableData = ref([])
 const loading = ref(false)
@@ -251,14 +271,18 @@ const resourceLoading = ref(false)
 const currentProjectForResource = ref(null)
 
 const handleResourceVisible = ref(false)
+const matchingInventory = ref([])
 const handleResourceForm = ref({
   requestId: null,
   projectName: '',
+  type: '', // 原始类型编码
   typeLabel: '',
   title: '',
   description: '',
   status: 1,
-  historyJson: ''
+  historyJson: '',
+  allocatedResourceId: null,
+  allocatedAmount: 0
 })
 const savingHandleResource = ref(false)
 
@@ -499,17 +523,28 @@ const getResourceStatusLabel = (status) => {
   return map[status] || '未知'
 }
 
-const openHandleResourceDialog = (row) => {
+const openHandleResourceDialog = async (row) => {
   handleResourceForm.value = {
     requestId: row.requestId,
     projectName: row.projectName,
+    type: row.type,
     typeLabel: getResourceTypeLabel(row.type),
     title: row.title,
     description: row.description,
     status: row.status || 1,
-    historyJson: row.historyJson || ''
+    historyJson: row.historyJson || '',
+    allocatedResourceId: null,
+    allocatedAmount: 0
   }
   handleResourceVisible.value = true
+
+  // 异步加载匹配的库存资源
+  try {
+    const res = await matchInventory(row.type)
+    matchingInventory.value = Array.isArray(res) ? res : []
+  } catch (e) {
+    console.error('加载匹配资源失败', e)
+  }
 }
 
 const submitHandleResource = async () => {
@@ -531,7 +566,9 @@ const submitHandleResource = async () => {
       requestId: handleResourceForm.value.requestId,
       status: handleResourceForm.value.status,
       handlerId,
-      historyJson: handleResourceForm.value.historyJson
+      historyJson: handleResourceForm.value.historyJson,
+      allocatedResourceId: handleResourceForm.value.allocatedResourceId,
+      allocatedAmount: handleResourceForm.value.allocatedAmount
     })
     ElMessage.success('处理成功')
     handleResourceVisible.value = false

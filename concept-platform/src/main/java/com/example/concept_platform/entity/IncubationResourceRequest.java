@@ -47,6 +47,10 @@ public class IncubationResourceRequest {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private Integer allocatedResourceId;
+
+    private java.math.BigDecimal allocatedAmount;
 }
 
 
